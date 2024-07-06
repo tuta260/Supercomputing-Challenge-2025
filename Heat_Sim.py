@@ -91,8 +91,8 @@ def runTimeStep1(timeStep):
         nextEnter = 0
         i = 0
         while(i<len(particleList)):
-            if(not(Math.abs(particleList[i].x) - lx)>1.25 and not(Math.abs(particleList[i].y - ly)>1.25) and not(index == i)):
-                if(Math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2)< 1.5):
+            if(not(math.abs(particleList[i].x) - lx)>1.25 and not(math.abs(particleList[i].y - ly)>1.25) and not(index == i)):
+                if(math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2)< 1.5):
                     adjacentIndices[nextEnter]=i
                     nextEnter +=1
                     if(nextEnter == 15):
@@ -103,8 +103,8 @@ def runTimeStep1(timeStep):
         
         
         for adjI in adjacentIndices:
-            #∆Q ~ 1cm^2 / Math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2) * (tempLocal - tempExternal)* timeStep /2   Divided by two since all interactions will be considered twice from both sides
-            heatOut = (particle.t-particleList[adjI].t)/(Math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2))*timeStep/2 # * some proportionality constant
+            #∆Q ~ 1cm^2 / math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2) * (tempLocal - tempExternal)* timeStep /2   Divided by two since all interactions will be considered twice from both sides
+            heatOut = (particle.t-particleList[adjI].t)/(math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2))*timeStep/2 # * some proportionality constant
             changeInHeat[adjI] += heatOut
             changeInHeat[index] -= heatOut
 
