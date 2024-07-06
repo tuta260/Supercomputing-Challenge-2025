@@ -64,41 +64,83 @@ while(i<len(particleList)):
 	i+=1
 '''
 
-def runTimeStep(time):
+
+#Consider adjacent particles as defined by relevant area and thickness to transfer heat
+#∆Q ~ Area of conduction / thickness of separating material (in this case distance between particles)* ∆T * t
+#for particles that are getting farther away from one another, the area goes to zero and the 'thickness' goes to infinity
+#think of the area at the percent of your view taken up by the particle and it getting smaller as it travels away 
 	
-	#Consider adjacent particles as defined by relevant area and thickness to transfer heat
-	#∆Q ~ Area of conduction / thickness of separating material (in this case distance between particles)* ∆T * t
-	#for particles that are getting farther away from one another, the area goes to zero and the 'thickness' goes to infinity
-	#think of the area at the percent of your view taken up by the particle and it getting smaller as it travels away 
-	
-	#Since it is difficult to calculate and make sense of that kind of area in this particle based model
-	#this will be approximated for now with Diameter of Particle ** 2/ distance away ** 3
-	# (this comes from pretending its a square with side length diameter then diminishing effect with distance)
-	
-	#So the diameter of the particles is (for now) 1 cm the sim 10 cm in size
-	
-	#this model allows for very liberal transfer of heat and 
-	
+#Since it is difficult to calculate and make sense of that kind of area in this particle based model
+#we will consider two paths: Refining the grid while keeping well define conduction relations
+# and considering a completely free interaction based on more accurate contact surfaces
+
+#the more simple of the two
+def runTimeStep1(timeStep):
+
+    changeInHeat = np.array([0.0]*len(particleList))
+    
+    #adjacent is defined by with a distance less than the grid size (with additional margin)
+    index = -1
+    for particle in particleList:
+        lx = particle.x
+        ly= particle.y
+        index +=1
+
+        #find adjacent
+        adjacentIndices = np.array([None]*15)
+        nextEnter = 0
+        i = 0
+        while(i<len(particleList)):
+            if(not(Math.abs(particleList[i].x) - lx)>1.25 and not(Math.abs(particleList[i].y - ly)>1.25) and not(index == i):
+                if(Math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2)< 1.5):
+                    adjacentIndices[nextEnter]=i
+                    nextEnter +=1
+                    if(nextEnter == 15):
+                        print("Error: solid too dense -- too many 'adjacent' particles found")
+                        i = len(particleList)
+
+            i+=1
+        
+        
+        for adjI in adjacentIndices:
+            #∆Q ~ 1cm^2 / Math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2) * (tempLocal - tempExternal)* timeStep /2   Divided by two since all interactions will be considered twice from both sides
+            heatOut = (particle.t-particleList[adjI].t)/(Math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2))*timeStep/2 # * some proportionality constant
+            changeInHeat[adjI] += heatOut
+            changeInHeat[index] -= heatOut
+
+    i = 0
+    while(i< len(particlesList)):
+        particleList[i].changeTemp(particleList[i].t+changeInHeat[i])
+    
 	
 
 
+def plot():
+    # plot
+    fig, ax = plt.subplots()
 
-# plot
-fig, ax = plt.subplots()
+    x = np.array([None]*len(particleList))
+    y = np.array([None]*len(particleList))
+    temps = np.array([None]*len(particleList))
+    i=0
+    while(i<len(particleList)):
+	    x[i] = particleList[i].x
+	    y[i] = particleList[i].y
+	    temps[i] = particleList[i].t
+	    i+=1
+    print("Max: ",np.amax(temps)," Min: ", np.amin(temps))
+    ax.scatter(x, y, c=temps, vmin=np.amin(temps),vmax = np.amax(temps))
 
-x = np.array([None]*len(particleList))
-y = np.array([None]*len(particleList))
-temps = np.array([None]*len(particleList))
-i=0
-while(i<len(particleList)):
-	x[i] = particleList[i].x
-	y[i] = particleList[i].y
-	temps[i] = particleList[i].t
-	i+=1
-print("Max: ",np.amax(temps)," Min: ", np.amin(temps))
-ax.scatter(x, y, c=temps, vmin=np.amin(temps),vmax = np.amax(temps))
+    ax.set(xlim=(0, 11), xticks=np.arange(0, 10),
+           ylim=(0, 11), yticks=np.arange(0, 10))
 
-ax.set(xlim=(0, 11), xticks=np.arange(0, 10),
-       ylim=(0, 11), yticks=np.arange(0, 10))
+    plt.show()
 
-plt.show()
+plot()
+running = True
+while(running):
+    if(input("Would you like to run it for a timestep? y/n ")=="y"):
+        runTimeStep1(1)
+        plot()
+    else:
+        running = False
