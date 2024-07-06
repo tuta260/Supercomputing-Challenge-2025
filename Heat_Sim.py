@@ -91,7 +91,7 @@ def runTimeStep1(timeStep):
         nextEnter = 0
         i = 0
         while(i<len(particleList)):
-            if(not(Math.abs(particleList[i].x) - lx)>1.25 and not(Math.abs(particleList[i].y - ly)>1.25) and not(index == i):
+            if(not(Math.abs(particleList[i].x) - lx)>1.25 and not(Math.abs(particleList[i].y - ly)>1.25) and not(index == i)):
                 if(Math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2)< 1.5):
                     adjacentIndices[nextEnter]=i
                     nextEnter +=1
@@ -124,10 +124,10 @@ def plot():
     temps = np.array([None]*len(particleList))
     i=0
     while(i<len(particleList)):
-	    x[i] = particleList[i].x
-	    y[i] = particleList[i].y
-	    temps[i] = particleList[i].t
-	    i+=1
+        x[i] = particleList[i].x
+        y[i] = particleList[i].y
+        temps[i] = particleList[i].t
+        i+=1
     print("Max: ",np.amax(temps)," Min: ", np.amin(temps))
     ax.scatter(x, y, c=temps, vmin=np.amin(temps),vmax = np.amax(temps))
 
