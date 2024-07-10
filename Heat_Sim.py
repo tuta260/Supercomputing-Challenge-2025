@@ -80,18 +80,18 @@ def runTimeStep1(timeStep):
     changeInHeat = np.array([0.0]*len(particleList))
     
     #adjacent is defined by with a distance less than the grid size (with additional margin)
-    index = -1
+    ind = -1
     for particle in particleList:
         lx = particle.x
         ly= particle.y
-        index +=1
+        ind +=1
 
         #find adjacent
         adjacentIndices = np.array([None]*15)
         nextEnter = 0
         i = 0
         while(i<len(particleList)):
-            if(not(math.abs(particleList[i].x) - lx)>1.25 and not(math.abs(particleList[i].y - ly)>1.25) and not(index == i)):
+            if(not(abs(particleList[i].x) - lx)>1.25 and not(abs(particleList[i].y - ly)>1.25) and not(ind == i)):
                 if(math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2)< 1.5):
                     adjacentIndices[nextEnter]=i
                     nextEnter +=1
@@ -101,16 +101,19 @@ def runTimeStep1(timeStep):
 
             i+=1
         
-        
-        for adjI in adjacentIndices:
-            #∆Q ~ 1cm^2 / math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2) * (tempLocal - tempExternal)* timeStep /2   Divided by two since all interactions will be considered twice from both sides
-            heatOut = (particle.t-particleList[adjI].t)/(math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2))*timeStep/2 # * some proportionality constant
-            changeInHeat[adjI] += heatOut
-            changeInHeat[index] -= heatOut
+        i=0
+        while(i < nextEnter):
+            particleActive = particleList[adjacentIndices[i]]
+        	#∆Q ~ 1cm^2 / math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2) * (tempLocal - tempExternal)* timeStep /2   Divided by two since all interactions will be considered twice from both sides
+            heatOut = (particle.t-particleActive.t)/(math.sqrt((particleActive.x-lx)**2+(particleActive.y-ly)**2))*timeStep/2 # * some proportionality constant
+            changeInHeat[adjacentIndices[i]] += heatOut
+            changeInHeat[ind] -= heatOut
+            i+=1
 
     i = 0
-    while(i< len(particlesList)):
+    while(i< len(particleList)):
         particleList[i].changeTemp(particleList[i].t+changeInHeat[i])
+        i+=1
     
 	
 
@@ -128,8 +131,18 @@ def plot():
         y[i] = particleList[i].y
         temps[i] = particleList[i].t
         i+=1
-    print("Max: ",np.amax(temps)," Min: ", np.amin(temps))
+    print("Scale Max: ",np.amax(temps)," Min: ", np.amin(temps))
     ax.scatter(x, y, c=temps, vmin=np.amin(temps),vmax = np.amax(temps))
+
+    ax.set(xlim=(0, 11), xticks=np.arange(0, 10),
+           ylim=(0, 11), yticks=np.arange(0, 10))
+
+    plt.show()
+    
+    fig, ax = plt.subplots()
+    
+    print("Scale: -50 - 100")
+    ax.scatter(x, y, c=temps, vmin=-50,vmax = 100)
 
     ax.set(xlim=(0, 11), xticks=np.arange(0, 10),
            ylim=(0, 11), yticks=np.arange(0, 10))
@@ -140,7 +153,14 @@ plot()
 running = True
 while(running):
     if(input("Would you like to run it for a timestep? y/n ")=="y"):
-        runTimeStep1(1)
+        runTimeStep1(.1)
         plot()
+    elif(input("Would you like to run for a longer time? y/n ")=="y"):
+    	totalTime = (int)(input("How long would you like to run the simulation? (min)"))
+    	i = 0
+    	while(i < totalTime):
+    		runTimeStep1(.1)
+    		i+=.1
+    	plot()
     else:
         running = False
