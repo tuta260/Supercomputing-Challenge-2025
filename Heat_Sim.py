@@ -156,11 +156,11 @@ while(running):
         runTimeStep1(.1)
         plot()
     elif(input("Would you like to run for a longer time? y/n ")=="y"):
-    	totalTime = (int)(input("How long would you like to run the simulation? (min)"))
-    	i = 0
-    	while(i < totalTime):
-    		runTimeStep1(.1)
-    		i+=.1
-    	plot()
+        totalTime = (int)(input("How long would you like to run the simulation? (min)"))
+        i = 0
+        while(i < totalTime):
+            runTimeStep1(.1)
+            i+=.1
+        plot()
     else:
         running = False
