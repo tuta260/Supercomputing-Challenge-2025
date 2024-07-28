@@ -8,6 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 #import pandas as pd
 import matplotlib
+import matplotlib.animation as animation
+import random
 
 plt.style.use('_mpl-gallery-nogrid')
 
@@ -17,9 +19,10 @@ plt.style.use('_mpl-gallery-nogrid')
 
 class Particle(object): 
     # change __init__ structure to 3d 
-    def __init__(self,xPos,yPos,temp): 
+    def __init__(self,xPos,yPos,zPos,temp): 
         self.x = xPos
         self.y = yPos
+        self.z = zPos
         self.t = temp
     
     def changeTemp(self,newTemp):
@@ -33,7 +36,7 @@ class Plate(Particle):
 
     pass
 
-class Extruder(object): 
+class Extruder(Particle): 
     
     pass 
 
@@ -42,17 +45,23 @@ class Material(Particle):
     pass 
 
 #make a sample set for 10 by 10 area
-iLength = 10
-kLength = 10
+iLength = 2
+kLength = 2
+jLength = 10
 
-particleList = np.array([None]*iLength*kLength)
+particleList = np.array([None]*iLength*kLength*jLength)
 
 i=0
 while(i<iLength):
     k=0
     while(k<kLength):
-        #change starting temperatures here
-        particleList[iLength*i+k] = Particle(i+1,k+1,5*k+9*i-k**2)
+        j=0
+        while(j<jLength):
+            #particleList[iLength*kLength*j+kLength*i+k] = Particle(i+1,k+1,j+1,random.random()*100)
+            particleList[iLength*kLength*j+kLength*i+k] = Particle(i+1,k+1,j+1,0)
+            if(j==0):
+                particleList[iLength*kLength*j+kLength*i+k].changeTemp(100)
+            j+=1
         k+=1
     
     i+=1
@@ -60,8 +69,8 @@ while(i<iLength):
 '''  
 i=0
 while(i<len(particleList)):
-	print("particle at x ",particleList[i].x, " y ", particleList[i].y, "with temp ", particleList[0].t)
-	i+=1
+    print("particle at x ",particleList[i].x, " y ", particleList[i].y, "with temp ", particleList[0].t)
+    i+=1
 '''
 
 
@@ -69,7 +78,7 @@ while(i<len(particleList)):
 #∆Q ~ Area of conduction / thickness of separating material (in this case distance between particles)* ∆T * t
 #for particles that are getting farther away from one another, the area goes to zero and the 'thickness' goes to infinity
 #think of the area at the percent of your view taken up by the particle and it getting smaller as it travels away 
-	
+    
 #Since it is difficult to calculate and make sense of that kind of area in this particle based model
 #we will consider two paths: Refining the grid while keeping well define conduction relations
 # and considering a completely free interaction based on more accurate contact surfaces
@@ -84,18 +93,27 @@ def runTimeStep1(timeStep):
     for particle in particleList:
         lx = particle.x
         ly= particle.y
+        lz = particle.z
         ind +=1
+        
+        #dad's problem
+        if(lz == 1):
+            particle.changeTemp(100)
 
         #find adjacent
-        adjacentIndices = np.array([None]*15)
+        adjacentIndices = np.array([None]*30)
+        adjDists = np.array([None]*30)
         nextEnter = 0
         i = 0
         while(i<len(particleList)):
-            if(not(abs(particleList[i].x) - lx)>1.25 and not(abs(particleList[i].y - ly)>1.25) and not(ind == i)):
-                if(math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2)< 1.5):
+            #general block to limit calculation complexity and speed
+            if((((abs(particleList[i].x) - lx)<1.5 and (abs(particleList[i].y - ly)<1.5)) and (abs(particleList[i].z-lz)<1.5)) and not(ind == i)):
+                distanceTo = math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2+(particleList[i].z-lz)**2)
+                if(distanceTo < 1.5):
                     adjacentIndices[nextEnter]=i
+                    adjDists[nextEnter]=distanceTo
                     nextEnter +=1
-                    if(nextEnter == 15):
+                    if(nextEnter == 30):
                         print("Error: solid too dense -- too many 'adjacent' particles found")
                         i = len(particleList)
 
@@ -104,8 +122,8 @@ def runTimeStep1(timeStep):
         i=0
         while(i < nextEnter):
             particleActive = particleList[adjacentIndices[i]]
-        	#∆Q ~ 1cm^2 / math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2) * (tempLocal - tempExternal)* timeStep /2   Divided by two since all interactions will be considered twice from both sides
-            heatOut = (particle.t-particleActive.t)/(math.sqrt((particleActive.x-lx)**2+(particleActive.y-ly)**2))*timeStep/2 # * some proportionality constant
+            #∆Q ~ 1cm^2 / math.sqrt((particleList[i].x-lx)**2+(particleList[i].y-ly)**2) * (tempLocal - tempExternal)* timeStep /2   Divided by two since all interactions will be considered twice from both sides
+            heatOut = (particle.t-particleActive.t)/(adjDists[i])*timeStep/2 # * some proportionality constant
             changeInHeat[adjacentIndices[i]] += heatOut
             changeInHeat[ind] -= heatOut
             i+=1
@@ -115,42 +133,46 @@ def runTimeStep1(timeStep):
         particleList[i].changeTemp(particleList[i].t+changeInHeat[i])
         i+=1
     
-	
+    
 
 
 def plot():
     # plot
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 
     x = np.array([None]*len(particleList))
     y = np.array([None]*len(particleList))
+    z = np.array([None]*len(particleList))
     temps = np.array([None]*len(particleList))
     i=0
     while(i<len(particleList)):
+        #print(i)
         x[i] = particleList[i].x
         y[i] = particleList[i].y
+        z[i] = particleList[i].z
         temps[i] = particleList[i].t
         i+=1
     print("Scale Max: ",np.amax(temps)," Min: ", np.amin(temps))
-    ax.scatter(x, y, c=temps, vmin=np.amin(temps),vmax = np.amax(temps))
+    ax.scatter(x, y, z, c=temps, vmin=np.amin(temps), vmax = np.amax(temps))
 
-    ax.set(xlim=(0, 11), xticks=np.arange(0, 10),
-           ylim=(0, 11), yticks=np.arange(0, 10))
+    ax.set(xlim=(0, iLength+1), xticks=np.arange(0, iLength+1),
+           ylim=(0, kLength+1), yticks=np.arange(0, kLength+1))
 
     plt.show()
     
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
     
     print("Scale: -50 - 100")
-    ax.scatter(x, y, c=temps, vmin=-50,vmax = 100)
+    ax.scatter(x, y, z, c=temps, vmin=-50, vmax = 100)
 
-    ax.set(xlim=(0, 11), xticks=np.arange(0, 10),
-           ylim=(0, 11), yticks=np.arange(0, 10))
+    ax.set(xlim=(0, iLength+1), xticks=np.arange(0, iLength+1),
+           ylim=(0, kLength+1), yticks=np.arange(0, kLength+1),)
 
     plt.show()
 
+
 plot()
-running = True
+running = False
 while(running):
     if(input("Would you like to run it for a timestep? y/n ")=="y"):
         runTimeStep1(.1)
@@ -164,3 +186,30 @@ while(running):
         plot()
     else:
         running = False
+        
+def updateParticles(num):
+    runTimeStep1(.05)
+    
+    #update 
+    x = np.array([None]*len(particleList))
+    y = np.array([None]*len(particleList))
+    z = np.array([None]*len(particleList))
+    temps = np.array([None]*len(particleList))
+    i=0
+    while(i<len(particleList)):
+        #print(i)
+        x[i] = particleList[i].x
+        y[i] = particleList[i].y
+        z[i] = particleList[i].z
+        temps[i] = particleList[i].t
+        i+=1
+    ax.scatter(x, y, z, c=temps, vmin=-50, vmax = 100)
+    ax.set(xlim=(0, iLength+1), xticks=np.arange(0, iLength+1),
+           ylim=(0, kLength+1), yticks=np.arange(0, kLength+1),)
+
+fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+ani = animation.FuncAnimation(
+    fig, updateParticles, frames=100, interval=500)
+
+plt.show()
