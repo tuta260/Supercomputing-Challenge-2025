@@ -28,8 +28,14 @@ class Particle(object):
     def changeTemp(self,newTemp):
         self.t = newTemp
     
+    def changeX(self,newX):
+        self.x = newX
     
-     
+    def changeY(self,newY):
+        self.y = newY
+    
+    def changeZ(self,newZ):
+        self.z = newZ
 
 
 class Plate(Particle):
@@ -45,11 +51,16 @@ class Material(Particle):
     pass 
 
 #make a sample set for 10 by 10 area
-iLength = 2
-kLength = 2
+iLength = 4
+kLength = 4
 jLength = 10
+frameNum = 100
+
+systemTime = 0 #for reference whenever an update is made to the system the time should be adjusted
+repeating = False
 
 particleList = np.array([None]*iLength*kLength*jLength)
+particleListHist = np.array([[None]*iLength*kLength*jLength]*(frameNum+1))
 
 i=0
 while(i<iLength):
@@ -57,15 +68,33 @@ while(i<iLength):
     while(k<kLength):
         j=0
         while(j<jLength):
-            #particleList[iLength*kLength*j+kLength*i+k] = Particle(i+1,k+1,j+1,random.random()*100)
-            particleList[iLength*kLength*j+kLength*i+k] = Particle(i+1,k+1,j+1,0)
+            realIndex = iLength*kLength*j+kLength*i+k
+            #particleList[realIndex] = Particle(i+1,k+1,j+1,random.random()*100)
+            particleList[realIndex] = Particle(i+1,k+1,j+1,0)
             if(j==0):
-                particleList[iLength*kLength*j+kLength*i+k].changeTemp(100)
+                particleList[realIndex].changeTemp(100)
+            
             j+=1
         k+=1
-    
     i+=1
-  
+
+n=0
+while(n<frameNum+1):
+    i=0
+    while(i<iLength):
+        k=0
+        while(k<kLength):
+            j=0
+            while(j<jLength):
+                realIndex = iLength*kLength*j+kLength*i+k
+                if(n==0):
+                    particleListHist[n][realIndex] = Particle(i+1,k+1,j+1,particleList[realIndex].t)
+                else:
+                    particleListHist[n][realIndex] = Particle(i+1,k+1,j+1,None)
+                j+=1
+            k+=1
+        i+=1
+    n+=1
 '''  
 i=0
 while(i<len(particleList)):
@@ -176,21 +205,43 @@ running = False
 while(running):
     if(input("Would you like to run it for a timestep? y/n ")=="y"):
         runTimeStep1(.1)
+        systemTime += .1
         plot()
     elif(input("Would you like to run for a longer time? y/n ")=="y"):
         totalTime = (int)(input("How long would you like to run the simulation? (min)"))
         i = 0
         while(i < totalTime):
             runTimeStep1(.1)
+            systemTime += .1
             i+=.1
         plot()
     else:
         running = False
         
+
+
 def updateParticles(num):
-    runTimeStep1(.05)
     
-    #update 
+    #if repeating sequence (end of history is full)
+    if(not(particleListHist[frameNum][0].t==None)):
+        i=0
+        while(i<len(particleList)):
+            particleList[i] = particleListHist[num][i]
+            i+=1
+    else:
+        runTimeStep1(.05)
+        #record
+        i=0
+        while(i<len(particleList)):
+            particleListHist[num+1][i].changeTemp(particleList[i].t)
+            particleListHist[num+1][i].changeX(particleList[i].x)
+            particleListHist[num+1][i].changeY(particleList[i].y)
+            particleListHist[num+1][i].changeZ(particleList[i].z)
+            i+=1
+    
+    systemTime = math.trunc(num*5+5)/100
+    
+    #update plot 
     x = np.array([None]*len(particleList))
     y = np.array([None]*len(particleList))
     z = np.array([None]*len(particleList))
@@ -205,11 +256,12 @@ def updateParticles(num):
         i+=1
     ax.scatter(x, y, z, c=temps, vmin=-50, vmax = 100)
     ax.set(xlim=(0, iLength+1), xticks=np.arange(0, iLength+1),
-           ylim=(0, kLength+1), yticks=np.arange(0, kLength+1),)
+           ylim=(0, kLength+1), yticks=np.arange(0, kLength+1))
+    ax.set_title(f"time: {systemTime} min")
+    
 
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
 ani = animation.FuncAnimation(
-    fig, updateParticles, frames=100, interval=500)
+    fig, updateParticles, frames=frameNum, interval=500)
 
 plt.show()
